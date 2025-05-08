@@ -17,7 +17,7 @@ import {
 interface Transcript {
   id: string;
   title: string;
-  content: string;
+  content: { text: string; start: number; duration: number }[];
   url: string;
 }
 
@@ -37,32 +37,12 @@ const TranscriptViewer = ({
   const [removeSpeakerLabels, setRemoveSpeakerLabels] =
     useState<boolean>(false);
 
-  // Default transcripts for demonstration when none are provided
-  const defaultTranscripts: Transcript[] = [
-    {
-      id: "default-1",
-      title: "How to Build a React App",
-      content:
-        "[00:00:00] Speaker 1: Welcome to this tutorial.\n[00:00:05] Speaker 1: Today we'll learn how to build a React application from scratch.\n[00:01:30] Speaker 2: Let's start by setting up our development environment.",
-      url: "https://youtube.com/watch?v=example1",
-    },
-    {
-      id: "default-2",
-      title: "Advanced CSS Techniques",
-      content:
-        "[00:00:00] Speaker 1: In this video, we'll explore advanced CSS techniques.\n[00:00:10] Speaker 1: First, let's talk about CSS Grid.\n[00:02:45] Speaker 1: Now let's move on to Flexbox.",
-      url: "https://youtube.com/watch?v=example2",
-    },
-  ];
+  const displayTranscripts = transcripts;
 
-  const displayTranscripts =
-    transcripts.length > 0 ? transcripts : defaultTranscripts;
-
-  const getFilteredTranscript = (content: string): string => {
-    let filteredContent = content;
+  const getFilteredTranscript = (content: { text: string }[]): string => {
+    let filteredContent = content.map(entry => entry.text).join("\n");
 
     if (removeTimestamps) {
-      // Remove timestamps in format [00:00:00]
       filteredContent = filteredContent.replace(
         /\[\d{2}:\d{2}:\d{2}\]\s?/g,
         "",
@@ -70,20 +50,18 @@ const TranscriptViewer = ({
     }
 
     if (removeSpeakerLabels) {
-      // Remove speaker labels like "Speaker 1: "
       filteredContent = filteredContent.replace(/Speaker \d+:\s?/g, "");
     }
 
     return filteredContent;
   };
 
-  const copyToClipboard = (content: string) => {
+  const copyToClipboard = (content: { text: string }[]) => {
     navigator.clipboard.writeText(getFilteredTranscript(content));
-    // In a real app, you might want to show a toast notification here
   };
 
   const downloadTranscript = (
-    content: string,
+    content: { text: string }[],
     title: string,
     format: string,
   ) => {
@@ -101,7 +79,6 @@ const TranscriptViewer = ({
       mimeType = "application/json";
       fileExtension = "json";
     } else if (format === "srt") {
-      // Simple SRT conversion (in a real app, this would be more sophisticated)
       const lines = filteredContent.split("\n");
       downloadContent = lines
         .map((line, index) => {

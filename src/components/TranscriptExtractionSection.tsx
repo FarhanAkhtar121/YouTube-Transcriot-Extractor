@@ -22,46 +22,35 @@ export default function TranscriptExtractionSection() {
   const [transcripts, setTranscripts] = useState<Transcript[]>([]);
   const [activeTab, setActiveTab] = useState("input");
 
-  const handleExtractTranscripts = (
+  const handleExtractTranscripts = async (
     urls: string[],
     type: "video" | "playlist" | "channel",
   ) => {
-    // This would be replaced with actual API calls in a real implementation
     setIsProcessing(true);
     setProgress(0);
     setProcessedVideos(0);
 
-    // Mock data for demonstration
-    const mockTotalVideos =
-      type === "video" ? urls.length : type === "playlist" ? 10 : 20;
-    setTotalVideos(mockTotalVideos);
-
-    // Simulate processing with a timer
-    const mockTranscripts: Transcript[] = [];
-    let processed = 0;
-
-    const interval = setInterval(() => {
-      processed += 1;
-      const newProgress = Math.round((processed / mockTotalVideos) * 100);
-
-      setProgress(newProgress);
-      setProcessedVideos(processed);
-
-      // Add a mock transcript
-      mockTranscripts.push({
-        id: `video-${processed}`,
-        title: `Video ${processed} Title`,
-        content: `This is the transcript content for video ${processed}. It would contain the actual transcript text extracted from the YouTube video.`,
-        url: urls[0] || `https://youtube.com/watch?v=mock${processed}`,
+    try {
+      const response = await fetch('http://localhost:8000/transcript', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: urls[0] }), // Adjust for multiple URLs if needed
       });
 
-      if (processed >= mockTotalVideos) {
-        clearInterval(interval);
-        setIsProcessing(false);
-        setTranscripts(mockTranscripts);
-        setActiveTab("results");
+      if (!response.ok) {
+        throw new Error('Failed to fetch transcript');
       }
-    }, 500);
+
+      const data = await response.json();
+      setTranscripts([{ id: data.video_id, title: 'Video Title', content: data.transcript, url: urls[0] }]);
+      setActiveTab("results"); // Switch to results tab
+    } catch (error) {
+      console.error('Error fetching transcript:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
