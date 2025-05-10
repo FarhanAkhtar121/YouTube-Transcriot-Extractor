@@ -3,6 +3,14 @@ from pydantic import BaseModel
 from youtube_transcript_api import YouTubeTranscriptApi
 from typing import List
 from fastapi.middleware.cors import CORSMiddleware
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+load_dotenv()
+client = OpenAI(
+    # This is the default and can be omitted
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 
 
 app = FastAPI()
@@ -54,4 +62,23 @@ def get_batch_transcripts(data: BatchUrls):
             results.append({"video_id": None, "error": str(e)})
     return results
 
-# Playlist support would require extracting all video IDs from the playlist URL
+@app.post("/summarize")
+def summarize_transcript(data: VideoUrl):
+    try:
+        video_id = extract_video_id(data.url)
+        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+        transcript_text = " ".join([entry['text'] for entry in transcript])
+        
+        # call OpenAI API for summarization 
+        response = client.responses.create(
+            model="gpt-4o",
+            instructions="You are a helpful assistant. Provide a concise and well-structured summary with bullet points.",
+            input=f"Summarize the following transcript: {transcript_text}",
+            
+            
+        )
+        
+        summary = response.output_text.strip()
+        return {"video_id": video_id, "summary": summary}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
