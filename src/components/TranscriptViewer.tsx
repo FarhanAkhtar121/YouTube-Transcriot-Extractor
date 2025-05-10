@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,6 +31,8 @@ const TranscriptViewer = ({
   transcripts = [],
   isLoading = false,
 }: TranscriptViewerProps) => {
+  const navigate = useNavigate();
+  const [summary, setSummary] = useState("");
   const [activeTab, setActiveTab] = useState<string>(
     transcripts[0]?.id || "empty",
   );
@@ -99,6 +102,27 @@ const TranscriptViewer = ({
     URL.revokeObjectURL(url);
   };
 
+  const handleSummarize = async (url) => {
+    try {
+      const response1 = await fetch('http://localhost:8000/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!response1.ok) {
+        throw new Error('Failed to summarize transcript');
+      }
+
+      const data = await response1.json();
+      setSummary(data.summary);
+    } catch (error) {
+      console.error('Error summarizing transcript:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="w-full h-96 flex items-center justify-center bg-background">
@@ -115,28 +139,7 @@ const TranscriptViewer = ({
       <div className="p-4 border-b">
         <div className="flex justify-between items-center">
           <h2 className="text-xl font-semibold">Transcript Viewer</h2>
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remove-timestamps"
-                checked={removeTimestamps}
-                onCheckedChange={(checked) =>
-                  setRemoveTimestamps(checked as boolean)
-                }
-              />
-              <Label htmlFor="remove-timestamps">Remove timestamps</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="remove-speakers"
-                checked={removeSpeakerLabels}
-                onCheckedChange={(checked) =>
-                  setRemoveSpeakerLabels(checked as boolean)
-                }
-              />
-              <Label htmlFor="remove-speakers">Remove speaker labels</Label>
-            </div>
-          </div>
+          <Button onClick={() => navigate("/")}>Home</Button>
         </div>
       </div>
 
@@ -182,6 +185,13 @@ const TranscriptViewer = ({
                       </a>
                     </div>
                     <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSummarize(transcript.url)}
+                      >
+                        Summarize
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -246,6 +256,16 @@ const TranscriptViewer = ({
                     <pre className="whitespace-pre-wrap font-mono text-sm">
                       {getFilteredTranscript(transcript.content)}
                     </pre>
+                    {summary && (
+                      <div className="mt-4">
+                        <h4 className="font-semibold">Summary:</h4>
+                        <div className="bg-gray-100 p-4 rounded">
+                          {summary.split('\n').map((line, index) => (
+                            <p key={index} className="mb-2">{line}</p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </ScrollArea>
                 </CardContent>
               </Card>
