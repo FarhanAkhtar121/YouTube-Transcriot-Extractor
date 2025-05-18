@@ -6,11 +6,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 load_dotenv()
 client = OpenAI(
     # This is the default and can be omitted
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
+
+YOUR_GOOGLE_CLIENT_ID = os.environ.get(
+    "GOOGLE_CLIENT_ID")
 
 
 app = FastAPI()
@@ -82,3 +88,12 @@ def summarize_transcript(data: VideoUrl):
         return {"video_id": video_id, "summary": summary}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/verify-token")
+def verify_token(token: str):
+    try:
+        idinfo = id_token.verify_oauth2_token(token, requests.Request(), "YOUR_GOOGLE_CLIENT_ID")
+        userid = idinfo['sub']
+        return {"status": "success", "userid": userid}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid token")
